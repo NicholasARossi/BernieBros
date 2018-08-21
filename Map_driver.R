@@ -12,6 +12,7 @@ stateAbbreviation <- "IA"
 party <- "Democrat"
 
 primaryResults <- read_csv("input/primary_results.csv")
+generalResults <- read_csv("input/general_results.csv")
 
 counties <- readOGR(dsn="input/county_shapefiles", layer="cb_2014_us_county_500k")
 counties@data$id <- rownames(counties@data)
@@ -25,19 +26,23 @@ stateFips <- state.fips$fips[state.fips$abb==stateAbbreviation]
 state <- primaryResults[primaryResults$state_abbreviation==stateAbbreviation,]$state[[1]]
 stateCounties <- counties.df[counties.df$STATEFP==sprintf("%02d", stateFips),]
 
-#stateResults <- merge(stateCounties, primaryResults[primaryResults$state_abbreviation==stateAbbreviation & primaryResults$party==party,], by.x="NAME", by.y="county")
-stateResults <- merge(stateCounties, primaryResults[primaryResults$state_abbreviation==stateAbbreviation & primaryResults$party==party,], by="fips")
-stateResults <- stateResults[order(stateResults$order),]
+#statePrimaryResults <- merge(stateCounties, primaryResults[primaryResults$state_abbreviation==stateAbbreviation & primaryResults$party==party,], by.x="NAME", by.y="county")
+statePrimaryResults <- merge(stateCounties, primaryResults[primaryResults$state_abbreviation==stateAbbreviation & primaryResults$party==party,], by="fips")
+statePrimaryResults <- statePrimaryResults[order(statePrimaryResults$order),]
+HillResults <- statePrimaryResults[statePrimaryResults$candidate=="Hillary Clinton",]
+BernResults <- statePrimaryResults[statePrimaryResults$candidate=="Bernie Sanders",]
 
-p <- ggplot(stateResults[stateResults$candidate=="Hillary Clinton",]) + 
-  aes(long,lat,group=group,fill=fraction_votes) + 
+HillResults$vote_diff <- HillResults$fraction_votes - BernResults$fraction_votes
+
+p <- ggplot(HillResults) + 
+  aes(long,lat,group=group,fill=vote_diff) + 
   geom_polygon() +
   geom_path(color="white") +
   facet_wrap(~candidate) +
   coord_equal() +
   scale_fill_gradientn(name="votes",
-                       colours=brewer.pal(11,"BuGn"),
-                       limits=c(0,1),
+                       colours=brewer.pal(11,"BrBG"),
+                       limits=c(-.5,.5),
                        labels=percent) + 
   theme_light(base_size=16) +
   theme(strip.text.x = element_text(size=14, colour="black"),
