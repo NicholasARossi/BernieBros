@@ -11,7 +11,7 @@ library(scales)
 # this is a combined driver to make multiple plots of state primaries and general election results
 
 # choosing the state to analyze
-stateAbbreviation <- "GA"
+stateAbbreviation <- "MI"
 
 # Loading the data
 generalResults <- read_csv("input/general_results.csv")
@@ -33,15 +33,15 @@ stateCounties <- counties.df[counties.df$STATEFP==sprintf("%02d", stateFips),]
 # adding general election info
 totalResults <- merge(stateCounties, generalResults[generalResults$state_abbreviation==stateAbbreviation,], by="fips")
 totalResults <- totalResults[order(totalResults$order),]
-totalResults$class <- "general"
-totalResults$vote_diff <- totalResults$Clinton - totalResults$Trump
+totalResults$vote_diff <- totalResults$votes_dem_2016 - totalResults$votes_gop_2016
 
 # adding primary information
 primaryResults$class <- "primary"
-
+party <- "Democrat"
 totalResults <- merge(totalResults, primaryResults[primaryResults$state_abbreviation==stateAbbreviation & primaryResults$party==party,], by="fips")
 totalResults <- totalResults[order(totalResults$order),]
 
+totalResults$trumpvdem <- totalResults$fraction_votes - totalResults$Trump
 
 
 
@@ -53,16 +53,23 @@ totalResults <- totalResults[order(totalResults$order),]
 #HillResults$percent_diff <- HillResults$fraction_votes - BernResults$fraction_votes
 
 
+# Here is a fancy color palette inspired by http://www.colbyimaging.com/wiki/statistics/color-bars
+#cool = rainbow(10, start=rgb2hsv(col2rgb('cyan'))[1], end=rgb2hsv(col2rgb('blue'))[1])
+#warm = rainbow(10, start=rgb2hsv(col2rgb('#ff8888'))[1], end=rgb2hsv(col2rgb('yellow'))[1])
+cols<-c("#34e1fb", "#8dbafb","#b9a1fb","#fb93fc")
+#cols<-c("#7f0000","#ffffff", "#0000b2")
 
+mypalette <- colorRampPalette(cols)(255)
 
 p <- ggplot(totalResults) + 
-  aes(long,lat,group=group,fill=vote_diff) + 
+  aes(long,lat,group=group,fill=trumpvdem) + 
   geom_polygon() +
   geom_path(color="white") +
+  facet_wrap(~candidate) +
   coord_equal() +
-  scale_fill_gradientn(name="votes",
-                       colours=brewer.pal(21,"BrBG"),
-                       limits=c(-1,1),
+  scale_fill_gradientn(name="Dem Win By",
+                       colours=mypalette,
+                       limits=c(-.5,.3),
                        labels=percent) + 
   theme_light(base_size=16) +
   theme(strip.text.x = element_text(size=14, colour="black"),
